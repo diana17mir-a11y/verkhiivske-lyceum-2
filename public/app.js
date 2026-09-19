@@ -1,0 +1,11 @@
+const $=s=>document.querySelector(s);$("#menu").onclick=()=>document.querySelector("nav").classList.toggle("open");
+function esc(s=""){return String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]))}
+fetch("/api/content").then(r=>r.json()).then(d=>{let s=d.site;document.title=s.metaTitle||s.name;document.querySelector('meta[name="description"]').content=s.metaDescription||s.description;
+$("#name").textContent=s.name;$("#tagline").textContent=s.tagline;$("#aboutText").textContent=s.about;$("#educationText").textContent=s.education;$("#safetyText").textContent=s.safety;$("#inclusionText").textContent=s.inclusion;$("#supportText").textContent=s.support;$("#address").textContent=s.address;$("#contactLine").textContent=[s.phone,s.email].filter(Boolean).join(" • ");
+$("#year").textContent=new Date().getFullYear();
+$("#newsList").innerHTML=d.news.length?d.news.map(x=>`<article><h3>${esc(x.title)}</h3><p>${esc(x.text||x.body||"")}</p>${x.url?`<a href="${esc(x.url)}" target="_blank">Детальніше →</a>`:""}</article>`).join(""):"<article><h3>Новини скоро з’являться</h3><p>Актуальні матеріали можна додавати через адмін-панель.</p></article>";
+$("#docsList").innerHTML=d.docs.length?d.docs.map(x=>`<article><h3>📄 ${esc(x.title)}</h3><a href="${esc(x.url)}" target="_blank">Відкрити документ →</a></article>`).join(""):"<article><h3>Документи</h3><p>Розділ готовий до наповнення через адмін-панель.</p></article>";
+$("#needsList").innerHTML=d.needs.length?d.needs.map(x=>`<article><h3>${esc(x.title)}</h3><p>${esc(x.text||"")}</p></article>`).join(""):"<article><h3>Актуальні потреби</h3><p>Потреби можна додавати через адмін-панель.</p></article>";
+$("#achList").innerHTML=d.achievements.length?d.achievements.map(x=>`<article><h3>🏆 ${esc(x.title)}</h3><p>${esc(x.text||"")}</p></article>`).join(""):"<article><h3>Досягнення</h3><p>Результати учнів та педагогів з’являться тут.</p></article>";
+$("#galleryList").innerHTML=d.photos.length?d.photos.map(x=>`<figure><img src="${esc(x.url)}" alt="${esc(x.title)}"><figcaption>${esc(x.title)}</figcaption></figure>`).join(""):"<article><p>Фотогалерею можна наповнювати через адмін-панель.</p></article>";
+})
