@@ -834,24 +834,11 @@ app.get("/robots.txt", (req, res) => {
     );
 });
 
-app.get("/sitemap.xml", (req, res) => {
-  const base =
-    req.protocol +
-    "://" +
-    req.get("host");
-
-  res
-    .type("application/xml")
-    .send(<?xml version="1.0" encoding="UTF-8"?>
+app.get("/sitemap.xml",(req,res)=>res.type("application/xml").send(<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url>
-    <loc>${base}/</loc>
-  </url>
-  <url>
-    <loc>${base}/admin</loc>
-  </url>
-</urlset>);
-});
+<url><loc>${req.protocol}://${req.get("host")}/</loc></url>
+<url><loc>${req.protocol}://${req.get("host")}/admin</loc></url>
+</urlset>));
 
 // ======================================================
 // STATIC FILES
