@@ -15,7 +15,8 @@ const pub = path.join(ROOT, "public");
 // PERSISTENT STORAGE
 // ======================================================
 
-const STORAGE_ROOT = process.env.STORAGE_ROOT || path.join(ROOT, "data");
+const STORAGE_ROOT =
+  process.env.STORAGE_ROOT || path.join(ROOT, "data");
 
 const DATA = path.join(STORAGE_ROOT, "content.json");
 const ADMIN = path.join(STORAGE_ROOT, "admin.json");
@@ -24,41 +25,55 @@ const uploadsDir = path.join(STORAGE_ROOT, "uploads");
 const imgDir = path.join(uploadsDir, "images");
 const docDir = path.join(uploadsDir, "docs");
 
-// Files from GitHub used as initial data
+// Initial files from repository
 const SEED_DATA = path.join(ROOT, "data", "content.json");
 const SEED_ADMIN = path.join(ROOT, "data", "admin.json");
 const SEED_UPLOADS = path.join(pub, "uploads");
 
-// Create persistent directories
-for (const dir of [STORAGE_ROOT, uploadsDir, imgDir, docDir]) {
+// ======================================================
+// CREATE DIRECTORIES
+// ======================================================
+
+for (const dir of [
+  STORAGE_ROOT,
+  uploadsDir,
+  imgDir,
+  docDir
+]) {
   fs.mkdirSync(dir, { recursive: true });
 }
 
 // ======================================================
-// INITIAL MIGRATION TO PERSISTENT DISK
+// INITIAL MIGRATION
 // ======================================================
 
-// Copy existing content.json to persistent disk
-if (!fs.existsSync(DATA)) {
-  if (fs.existsSync(SEED_DATA)) {
-    fs.copyFileSync(SEED_DATA, DATA);
-    console.log("Initial content.json copied to persistent storage");
-  }
+// Copy content.json to persistent storage
+if (!fs.existsSync(DATA) && fs.existsSync(SEED_DATA)) {
+  fs.copyFileSync(SEED_DATA, DATA);
+  console.log(
+    "Initial content.json copied to persistent storage"
+  );
 }
 
-// Copy existing admin.json to persistent disk
-// This preserves the current admin login/password hash.
+// Copy admin.json to persistent storage
+// This preserves the existing admin password.
 if (!fs.existsSync(ADMIN)) {
   if (fs.existsSync(SEED_ADMIN)) {
     fs.copyFileSync(SEED_ADMIN, ADMIN);
-    console.log("Initial admin.json copied to persistent storage");
+
+    console.log(
+      "Initial admin.json copied to persistent storage"
+    );
   } else {
     const defaultPassword =
-      process.env.ADMIN_PASSWORD || "Lyceum2-Admin-2026!";
+      process.env.ADMIN_PASSWORD ||
+      "Lyceum2-Admin-2026!";
 
-    const salt = crypto.randomBytes(16).toString("hex");
+    const salt = crypto
+      .randomBytes(16)
+      .toString("hex");
 
-    const hash = crypto
+    const passwordHash = crypto
       .scryptSync(defaultPassword, salt, 64)
       .toString("hex");
 
@@ -66,9 +81,10 @@ if (!fs.existsSync(ADMIN)) {
       ADMIN,
       JSON.stringify(
         {
-          login: process.env.ADMIN_LOGIN || "admin",
+          login:
+            process.env.ADMIN_LOGIN || "admin",
           salt,
-          hash
+          hash: passwordHash
         },
         null,
         2
@@ -76,24 +92,33 @@ if (!fs.existsSync(ADMIN)) {
       "utf8"
     );
 
-    console.log("New admin.json created in persistent storage");
+    console.log(
+      "New admin.json created in persistent storage"
+    );
   }
 }
 
-// Copy existing uploads to persistent disk on first startup
+// ======================================================
+// COPY EXISTING UPLOADS
+// ======================================================
+
 if (
   fs.existsSync(SEED_UPLOADS) &&
-  fs.existsSync(uploadsDir) &&
   fs.readdirSync(uploadsDir).length === 0
 ) {
   fs.cpSync(SEED_UPLOADS, uploadsDir, {
     recursive: true
   });
 
-  console.log("Existing uploads copied to persistent storage");
+  console.log(
+    "Existing uploads copied to persistent storage"
+  );
 }
 
-// If content.json still does not exist, create basic structure
+// ======================================================
+// CREATE CONTENT IF MISSING
+// ======================================================
+
 if (!fs.existsSync(DATA)) {
   const initialContent = {
     site: {},
@@ -118,7 +143,9 @@ if (!fs.existsSync(DATA)) {
 // ======================================================
 
 function read() {
-  return JSON.parse(fs.readFileSync(DATA, "utf8"));
+  return JSON.parse(
+    fs.readFileSync(DATA, "utf8")
+  );
 }
 
 function write(data) {
@@ -133,7 +160,10 @@ function write(data) {
 // PASSWORD HASHING
 // ======================================================
 
-function hash(password, salt = crypto.randomBytes(16).toString("hex")) {
+function hash(
+  password,
+  salt = crypto.randomBytes(16).toString("hex")
+) {
   return {
     salt,
     hash: crypto
@@ -159,8 +189,18 @@ function auth(req, res, next) {
 // ======================================================
 // MIDDLEWARE
 // ======================================================
-app.use(express.json({ limit: "2mb" }));
-app.use(express.urlencoded({ extended: true }));
+
+app.use(
+  express.json({
+    limit: "2mb"
+  })
+);
+
+app.use(
+  express.urlencoded({
+    extended: true
+  })
+);
 
 app.set("trust proxy", 1);
 
@@ -176,7 +216,8 @@ app.use(
     cookie: {
       httpOnly: true,
       sameSite: "lax",
-      secure: process.env.NODE_ENV === "production"
+      secure:
+        process.env.NODE_ENV === "production"
     }
   })
 );
@@ -195,8 +236,12 @@ const storage = (dir) =>
           null,
           Date.now() +
             "-" +
-            crypto.randomBytes(5).toString("hex") +
-            path.extname(file.originalname).toLowerCase()
+            crypto
+              .randomBytes(5)
+              .toString("hex") +
+            path
+              .extname(file.originalname)
+              .toLowerCase()
         );
       }
     }),
@@ -215,8 +260,12 @@ const uploadImg = multer({
         null,
         Date.now() +
           "-" +
-          crypto.randomBytes(5).toString("hex") +
-          path.extname(file.originalname).toLowerCase()
+          crypto
+            .randomBytes(5)
+            .toString("hex") +
+          path
+            .extname(file.originalname)
+            .toLowerCase()
       );
     }
   }),
@@ -229,7 +278,7 @@ const uploadImg = multer({
 const uploadDoc = storage(docDir);
 
 // ======================================================
-// API
+// API: CONTENT
 // ======================================================
 
 app.get("/api/content", (req, res) => {
@@ -253,7 +302,10 @@ app.post("/api/login", (req, res) => {
     );
 
     const passwordHash = Buffer.from(
-      hash(req.body.password, admin.salt).hash,
+      hash(
+        req.body.password,
+        admin.salt
+      ).hash,
       "hex"
     );
 
@@ -265,7 +317,10 @@ app.post("/api/login", (req, res) => {
     if (
       req.body.login === admin.login &&
       passwordHash.length === savedHash.length &&
-      crypto.timingSafeEqual(passwordHash, savedHash)
+      crypto.timingSafeEqual(
+        passwordHash,
+        savedHash
+      )
     ) {
       req.session.user = admin.login;
 
@@ -290,243 +345,38 @@ app.post("/api/login", (req, res) => {
 // LOGOUT
 // ======================================================
 
-app.post("/api/logout", auth, (req, res) => {
-  req.session.destroy(() => {
-    res.json({
-      ok: true
+app.post(
+  "/api/logout",
+  auth,
+  (req, res) => {
+    req.session.destroy(() => {
+      res.json({
+        ok: true
+      });
     });
-  });
-});
-
-// ======================================================
-// SITE SETTINGS
-// ======================================================
-
-app.put("/api/site", auth, (req, res) => {
-  const data = read();
-
-  data.site = {
-    ...data.site,
-    ...req.body
-  };
-
-  write(data);
-
-  res.json(data.site);
-});
-
-// ======================================================
-// COLLECTIONS
-// ======================================================
-
-const collections = [
-  "news",
-  "docs",
-  "needs",
-  "teachers",
-  "achievements",
-  "links"
-];
-
-for (const key of collections) {
-  app.post("/api/" + key, auth, (req, res) => {
-    const data = read();
-
-    if (!Array.isArray(data[key])) {
-      data[key] = [];
-    }
-
-    const item = {
-      id: Date.now().toString(),
-      ...req.body
-    };
-
-    data[key].unshift(item);
-
-    write(data);
-
-    res.json(item);
-  });
-
-  app.put("/api/" + key + "/:id", auth, (req, res) => {
-    const data = read();
-
-    if (!Array.isArray(data[key])) {
-      return res.sendStatus(404);
-    }
-
-    const index = data[key].findIndex(
-      (item) => item.id === req.params.id
-    );
-
-    if (index < 0) {
-      return res.sendStatus(404);
-    }
-
-    data[key][index] = {
-      ...data[key][index],
-      ...req.body
-    };
-
-    write(data);
-
-    res.json(data[key][index]);
-  });
- app.use(express.json({ limit: "2mb" }));
-app.use(express.urlencoded({ extended: true }));
-
-app.set("trust proxy", 1);
-
-app.use(
-  session({
-    secret:
-      process.env.SESSION_SECRET ||
-      "change-this-session-secret-before-production",
-
-    resave: false,
-    saveUninitialized: false,
-
-    cookie: {
-      httpOnly: true,
-      sameSite: "lax",
-      secure: process.env.NODE_ENV === "production"
-    }
-  })
+  }
 );
 
 // ======================================================
-// FILE UPLOADS
-// ======================================================
-
-const storage = (dir) =>
-  multer({
-    storage: multer.diskStorage({
-      destination: dir,
-
-      filename: (req, file, cb) => {
-        cb(
-          null,
-          Date.now() +
-            "-" +
-            crypto.randomBytes(5).toString("hex") +
-            path.extname(file.originalname).toLowerCase()
-        );
-      }
-    }),
-
-    limits: {
-      fileSize: 25 * 1024 * 1024
-    }
-  });
-
-const uploadImg = multer({
-  storage: multer.diskStorage({
-    destination: imgDir,
-
-    filename: (req, file, cb) => {
-      cb(
-        null,
-        Date.now() +
-          "-" +
-          crypto.randomBytes(5).toString("hex") +
-          path.extname(file.originalname).toLowerCase()
-      );
-    }
-  }),
-
-  limits: {
-    fileSize: 10 * 1024 * 1024
-  }
-});
-
-const uploadDoc = storage(docDir);
-
-// ======================================================
-// API
-// ======================================================
-
-app.get("/api/content", (req, res) => {
-  res.json(read());
-});
-
-app.get("/api/me", (req, res) => {
-  res.json({
-    loggedIn: !!req.session.user
-  });
-});
-
-// ======================================================
-// LOGIN
-// ======================================================
-
-app.post("/api/login", (req, res) => {
-  try {
-    const admin = JSON.parse(
-      fs.readFileSync(ADMIN, "utf8")
-    );
-
-    const passwordHash = Buffer.from(
-      hash(req.body.password, admin.salt).hash,
-      "hex"
-    );
-
-    const savedHash = Buffer.from(
-      admin.hash,
-      "hex"
-    );
-
-    if (
-      req.body.login === admin.login &&
-      passwordHash.length === savedHash.length &&
-      crypto.timingSafeEqual(passwordHash, savedHash)
-    ) {
-      req.session.user = admin.login;
-
-      return res.json({
-        ok: true
-      });
-    }
-
-    res.status(401).json({
-      error: "Неверный логин или пароль"
-    });
-  } catch (error) {
-    console.error(error);
-
-    res.status(500).json({
-      error: "Ошибка входа"
-    });
-  }
-});
-
-// ======================================================
-// LOGOUT
-// ======================================================
-
-app.post("/api/logout", auth, (req, res) => {
-  req.session.destroy(() => {
-    res.json({
-      ok: true
-    });
-  });
-});
-
-// ======================================================
 // SITE SETTINGS
 // ======================================================
 
-app.put("/api/site", auth, (req, res) => {
-  const data = read();
+app.put(
+  "/api/site",
+  auth,
+  (req, res) => {
+    const data = read();
 
-  data.site = {
-    ...data.site,
-    ...req.body
-  };
+    data.site = {
+      ...data.site,
+      ...req.body
+    };
 
-  write(data);
+    write(data);
 
-  res.json(data.site);
-});
+    res.json(data.site);
+  }
+);
 
 // ======================================================
 // COLLECTIONS
@@ -542,66 +392,84 @@ const collections = [
 ];
 
 for (const key of collections) {
-  app.post("/api/" + key, auth, (req, res) => {
-    const data = read();
+  // CREATE
+  app.post(
+    "/api/" + key,
+    auth,
+    (req, res) => {
+      const data = read();
 
-    if (!Array.isArray(data[key])) {
-      data[key] = [];
+      if (!Array.isArray(data[key])) {
+        data[key] = [];
+      }
+
+      const item = {
+        id: Date.now().toString(),
+        ...req.body
+      };
+
+      data[key].unshift(item);
+
+      write(data);
+
+      res.json(item);
     }
+  );
 
-    const item = {
-      id: Date.now().toString(),
-      ...req.body
-    };
+  // UPDATE
+  app.put(
+    "/api/" + key + "/:id",
+    auth,
+    (req, res) => {
+      const data = read();
 
-    data[key].unshift(item);
+      if (!Array.isArray(data[key])) {
+        return res.sendStatus(404);
+      }
 
-    write(data);
+      const index = data[key].findIndex(
+        (item) =>
+          item.id === req.params.id
+      );
 
-    res.json(item);
-  });
+      if (index < 0) {
+        return res.sendStatus(404);
+      }
 
-  app.put("/api/" + key + "/:id", auth, (req, res) => {
-    const data = read();
+      data[key][index] = {
+        ...data[key][index],
+        ...req.body
+      };
 
-    if (!Array.isArray(data[key])) {
-      return res.sendStatus(404);
+      write(data);
+
+      res.json(data[key][index]);
     }
+  );
 
-    const index = data[key].findIndex(
-      (item) => item.id === req.params.id
-    );
+  // DELETE
+  app.delete(
+    "/api/" + key + "/:id",
+    auth,
+    (req, res) => {
+      const data = read();
 
-    if (index < 0) {
-      return res.sendStatus(404);
+      if (!Array.isArray(data[key])) {
+        return res.sendStatus(404);
+      }
+
+      data[key] = data[key].filter(
+        (item) =>
+          item.id !== req.params.id
+      );
+
+      write(data);
+
+      res.json({
+        ok: true
+      });
     }
-
-    data[key][index] = {
-      ...data[key][index],
-      ...req.body
-    };
-
-    write(data);
-
-    res.json(data[key][index]);
-  });
-app.delete("/api/" + key + "/:id", auth, (req, res) => {
-    const data = read();
-
-    if (!Array.isArray(data[key])) {
-      return res.sendStatus(404);
-    }
-
-    data[key] = data[key].filter(
-      (item) => item.id !== req.params.id
-    );
-
-    write(data);
-
-    res.json({
-      ok: true
-    });
-  });
+  );
 }
 
 // ======================================================
@@ -629,8 +497,9 @@ app.post(
       const item = {
         id: Date.now().toString(),
 
-        // URL remains exactly the same for the website
-        url: "/uploads/images/" + req.file.filename,
+        url:
+          "/uploads/images/" +
+          req.file.filename,
 
         title:
           req.body.title ||
@@ -646,7 +515,8 @@ app.post(
       console.error(error);
 
       res.status(500).json({
-        error: "Ошибка загрузки фотографии"
+        error:
+          "Ошибка загрузки фотографии"
       });
     }
   }
@@ -667,15 +537,17 @@ app.delete(
     }
 
     const photo = data.photos.find(
-      (item) => item.id === req.params.id
+      (item) =>
+        item.id === req.params.id
     );
 
     if (photo) {
       try {
-        const relativePath = photo.url.replace(
-          /^\/uploads\//,
-          ""
-        );
+        const relativePath =
+          photo.url.replace(
+            /^\/uploads\//,
+            ""
+          );
 
         const filePath = path.join(
           uploadsDir,
@@ -692,7 +564,8 @@ app.delete(
     }
 
     data.photos = data.photos.filter(
-      (item) => item.id !== req.params.id
+      (item) =>
+        item.id !== req.params.id
     );
 
     write(data);
@@ -732,7 +605,9 @@ app.post(
           req.body.title ||
           req.file.originalname,
 
-        url: "/uploads/docs/" + req.file.filename
+        url:
+          "/uploads/docs/" +
+          req.file.filename
       };
 
       data.docs.unshift(item);
@@ -744,7 +619,8 @@ app.post(
       console.error(error);
 
       res.status(500).json({
-        error: "Ошибка загрузки документа"
+        error:
+          "Ошибка загрузки документа"
       });
     }
   }
@@ -754,98 +630,135 @@ app.post(
 // CHANGE PASSWORD
 // ======================================================
 
-app.post("/api/password", auth, (req, res) => {
-  try {
-    const admin = JSON.parse(
-      fs.readFileSync(ADMIN, "utf8")
-    );
-
-    let oldPasswordCorrect = false;
-
-    // Allow environment password during initial setup
-    if (
-      process.env.ADMIN_PASSWORD &&
-      req.body.old === process.env.ADMIN_PASSWORD
-    ) {
-      oldPasswordCorrect = true;
-    }
-
-    // Check current stored password
-    if (!oldPasswordCorrect) {
-      const currentHash = crypto
-        .scryptSync(
-          req.body.old,
-          admin.salt,
-          64
+app.post(
+  "/api/password",
+  auth,
+  (req, res) => {
+    try {
+      const admin = JSON.parse(
+        fs.readFileSync(
+          ADMIN,
+          "utf8"
         )
-        .toString("hex");
+      );
 
-      oldPasswordCorrect =
-        currentHash === admin.hash;
-    }
+      let oldPasswordCorrect =
+        false;
 
-    if (!oldPasswordCorrect) {
-      return res.status(400).json({
-        error: "Старий пароль невірний"
+      if (
+        process.env.ADMIN_PASSWORD &&
+        req.body.old ===
+          process.env.ADMIN_PASSWORD
+      ) {
+        oldPasswordCorrect = true;
+      }
+
+      if (!oldPasswordCorrect) {
+        const currentHash =
+          crypto
+            .scryptSync(
+              req.body.old,
+              admin.salt,
+              64
+            )
+            .toString("hex");
+
+        oldPasswordCorrect =
+          currentHash === admin.hash;
+      }
+
+      if (!oldPasswordCorrect) {
+        return res.status(400).json({
+          error:
+            "Старий пароль невірний"
+        });
+      }
+
+      const newPassword = hash(
+        req.body.new
+      );
+
+      fs.writeFileSync(
+        ADMIN,
+        JSON.stringify(
+          {
+            login: admin.login,
+            ...newPassword
+          },
+          null,
+          2
+        ),
+        "utf8"
+      );
+
+      res.json({
+        ok: true
+      });
+    } catch (error) {
+      console.error(error);
+
+      res.status(500).json({
+        error:
+          "Помилка зміни пароля"
       });
     }
-
-    const newPassword = hash(req.body.new);
-fs.writeFileSync(
-      ADMIN,
-      JSON.stringify(
-        {
-          login: admin.login,
-          ...newPassword
-        },
-        null,
-        2
-      ),
-      "utf8"
-    );
-
-    res.json({
-      ok: true
-    });
-  } catch (error) {
-    console.error(error);
-
-    res.status(500).json({
-      error: "Помилка зміни пароля"
-    });
   }
-});
+);
 
 // ======================================================
-// SEO
+// ROBOTS.TXT
 // ======================================================
 
-app.get("/robots.txt", (req, res) => {
-  res
-    .type("text")
-    .send(
-      "User-agent: *\n" +
-        "Allow: /\n" +
-        "Sitemap: " +
-        req.protocol +
-        "://" +
-        req.get("host") +
-        "/sitemap.xml"
-    );
-});
+app.get(
+  "/robots.txt",
+  (req, res) => {
+    res
+      .type("text")
+      .send(
+        "User-agent: *\n" +
+          "Allow: /\n" +
+          "Sitemap: " +
+          req.protocol +
+          "://" +
+          req.get("host") +
+          "/sitemap.xml"
+      );
+  }
+);
 
-app.get("/sitemap.xml",(req,res)=>res.type("application/xml").send(`<?xml version="1.0" encoding="UTF-8"?>
+// ======================================================
+// SITEMAP
+// ======================================================
+
+app.get(
+  "/sitemap.xml",
+  (req, res) => {
+    const base =
+      req.protocol +
+      "://" +
+      req.get("host");
+
+    const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-<url><loc>${req.protocol}://${req.get("host")}/</loc></url>
-<url><loc>${req.protocol}://${req.get("host")}/admin</loc></url>
-</urlset>`));
+  <url>
+    <loc>${base}/</loc>
+  </url>
+  <url>
+    <loc>${base}/admin</loc>
+  </url>
+</urlset>`;
+
+    res
+      .type("application/xml")
+      .send(sitemap);
+  }
+);
 
 // ======================================================
 // STATIC FILES
 // ======================================================
 
-// IMPORTANT:
-// Persistent uploads are served from /var/data/uploads
+// Persistent uploads
 app.use(
   "/uploads",
   express.static(uploadsDir)
@@ -857,32 +770,46 @@ app.use(
 );
 
 // Admin panel
-app.get("/admin", (req, res) => {
-  res.sendFile(
-    path.join(pub, "admin.html")
-  );
-});
+app.get(
+  "/admin",
+  (req, res) => {
+    res.sendFile(
+      path.join(
+        pub,
+        "admin.html"
+      )
+    );
+  }
+);
 
 // SPA fallback
-app.get("/{*splat}", (req, res) => {
-  res.sendFile(
-    path.join(pub, "index.html")
-  );
-});
+app.get(
+  "/{*splat}",
+  (req, res) => {
+    res.sendFile(
+      path.join(
+        pub,
+        "index.html"
+      )
+    );
+  }
+);
 
 // ======================================================
 // START
 // ======================================================
 
-app.listen(PORT, () => {
-  console.log(
-    "Ліцей v3.3 Full: http://localhost:" +
-      PORT
-  );
+app.listen(
+  PORT,
+  () => {
+    console.log(
+      "Ліцей v3.3 Full: http://localhost:" +
+        PORT
+    );
 
-  console.log(
-    "Persistent storage:",
-    STORAGE_ROOT
-  );
-});
- 
+    console.log(
+      "Persistent storage:",
+      STORAGE_ROOT
+    );
+  }
+);
